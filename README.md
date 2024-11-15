@@ -5,14 +5,16 @@ The DuckDB Cron extension adds support for scheduled query execution within Duck
 
 > Experimental: USE AT YOUR OWN RISK!
 
-
 ### Cron Runner
 ```sql
--- Run a query every ten seconds
-SELECT cron('SELECT version()', '*/10 * * * * *') AS job_id;
+-- Every 15 seconds during hours 1-4
+SELECT cron('SELECT now()', '*/15 * 1-4 * * *');
 
--- Run a query every hour at minute 0
-SELECT cron('SELECT now()', '0 * * * * *') AS job_id;
+-- Every 2 hours (at minute 0, second 0) during hours 1-4
+SELECT cron('SELECT version()', '0 0 */2 1-4 * *');
+
+-- Every Monday through Friday at 7:00:00 AM
+SELECT cron('SELECT cleanup()', '0 0 7 ? * MON-FRI');
 ```
 
 The function returns a job ID that can be used to manage the scheduled task.
@@ -25,6 +27,38 @@ The function returns a job ID that can be used to manage the scheduled task.
 │ task_0   │
 └──────────┘
 ```
+
+#### Supported Expressions
+The extension uses six-field cron expressions:
+```
+┌───────────── second (0 - 59)
+│ ┌───────────── minute (0 - 59)
+│ │ ┌───────────── hour (0 - 23)
+│ │ │ ┌───────────── day of month (1 - 31)
+│ │ │ │ ┌───────────── month (1 - 12)
+│ │ │ │ │ ┌───────────── day of week (0 - 6) (Sunday to Saturday)
+│ │ │ │ │ │
+* * * * * *
+```
+
+##### Special characters:
+
+- `*`: any value
+- `?`: no specific value (used in day-of-month/day-of-week)
+- `,`: value list separator
+- `-`: range of values
+- `/`: step values
+- `MON-SUN`: named weekdays (case sensitive)
+
+##### Common Patterns:
+```
+0 0 * * * *: Top of every hour
+0 */15 * * * *: Every 15 minutes
+0 0 0 * * *: Once per day at midnight
+0 0 12 ? * MON-FRI: Weekdays at noon
+0 0 0 1 * ?: First day of every month
+```
+
 
 ### Listing Jobs
 Use the cron_jobs() table function to view all scheduled jobs and their status:
@@ -41,7 +75,7 @@ SELECT * FROM cron_jobs();
 
 Returns:
 
-- `job_id``: Unique identifier for the job
+- `job_id`: Unique identifier for the job
 - `query`: The SQL query to execute
 - `schedule`: The cron expression
 - `next_run`: Next scheduled execution time
