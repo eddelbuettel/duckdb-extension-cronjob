@@ -1,0 +1,18 @@
+# name: test/sql/cronjob.test
+# description: test cronjob extension
+# group: [cronjob]
+
+# Before we load the extension, this will fail
+statement error
+SELECT cronjob('Sam');
+----
+Catalog Error: Scalar Function with name cronjob does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require cronjob
+
+# Confirm the extension works
+query I
+SELECT cron('SELECT version()', '*/10 * * * * *');
+----
+task_0
