@@ -6,19 +6,25 @@ The DuckDB Cron extension adds support for scheduled query execution within Duck
 > Experimental: USE AT YOUR OWN RISK!
 
 
-### Cron
+### Cron Runner
 ```sql
--- Run a query every minute
-SELECT cron('SELECT COUNT(*) FROM mytable', '* * * * *') AS job_id;
+-- Run a query every ten seconds
+SELECT cron('SELECT version()', '*/10 * * * * *') AS job_id;
 
 -- Run a query every hour at minute 0
-SELECT cron('SELECT now()', '0 * * * *') AS job_id;
-
--- Run a query every day at 2:30 AM
-SELECT cron('CALL maintenance()', '30 2 * * *') AS job_id;
+SELECT cron('SELECT now()', '0 * * * * *') AS job_id;
 ```
 
 The function returns a job ID that can be used to manage the scheduled task.
+
+```sql
+┌──────────┐
+│  job_id  │
+│  varchar │
+├──────────┤
+│ task_0   │
+└──────────┘
+```
 
 ### Listing Jobs
 Use the cron_jobs() table function to view all scheduled jobs and their status:
