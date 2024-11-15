@@ -1,86 +1,50 @@
-# Cronjob
+<img src="https://github.com/user-attachments/assets/46a5c546-7e9b-42c7-87f4-bc8defe674e0" width=250 />
 
-This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
+# DuckDB CronJob Extension
+The DuckDB Cron extension adds support for scheduled query execution within DuckDB. It allows you to schedule SQL queries to run periodically using standard cron expressions while your DuckDB process is active.
 
----
-
-This extension, Cronjob, allow you to ... <extension_goal>.
+> Experimental: USE AT YOUR OWN RISK!
 
 
-## Building
-### Managing dependencies
-DuckDB extensions uses VCPKG for dependency management. Enabling VCPKG is very simple: follow the [installation instructions](https://vcpkg.io/en/getting-started) or just run the following:
-```shell
-git clone https://github.com/Microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
-export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
-```
-Note: VCPKG is only required for extensions that want to rely on it for dependency management. If you want to develop an extension without dependencies, or want to do your own dependency management, just skip this step. Note that the example extension uses VCPKG to build with a dependency for instructive purposes, so when skipping this step the build may not work without removing the dependency.
-
-### Build steps
-Now to build the extension, run:
-```sh
-make
-```
-The main binaries that will be built are:
-```sh
-./build/release/duckdb
-./build/release/test/unittest
-./build/release/extension/cronjob/cronjob.duckdb_extension
-```
-- `duckdb` is the binary for the duckdb shell with the extension code automatically loaded.
-- `unittest` is the test runner of duckdb. Again, the extension is already linked into the binary.
-- `cronjob.duckdb_extension` is the loadable binary as it would be distributed.
-
-## Running the extension
-To run the extension code, simply start the shell with `./build/release/duckdb`.
-
-Now we can use the features from the extension directly in DuckDB. The template contains a single scalar function `cronjob()` that takes a string arguments and returns a string:
-```
-D select cronjob('Jane') as result;
-┌───────────────┐
-│    result     │
-│    varchar    │
-├───────────────┤
-│ Cronjob Jane 🐥 │
-└───────────────┘
-```
-
-## Running the tests
-Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
-```sh
-make test
-```
-
-### Installing the deployed binaries
-To install your extension binaries from S3, you will need to do two things. Firstly, DuckDB should be launched with the
-`allow_unsigned_extensions` option set to true. How to set this will depend on the client you're using. Some examples:
-
-CLI:
-```shell
-duckdb -unsigned
-```
-
-Python:
-```python
-con = duckdb.connect(':memory:', config={'allow_unsigned_extensions' : 'true'})
-```
-
-NodeJS:
-```js
-db = new duckdb.Database(':memory:', {"allow_unsigned_extensions": "true"});
-```
-
-Secondly, you will need to set the repository endpoint in DuckDB to the HTTP url of your bucket + version of the extension
-you want to install. To do this run the following SQL query in DuckDB:
+### Cron
 ```sql
-SET custom_extension_repository='bucket.s3.eu-west-1.amazonaws.com/<your_extension_name>/latest';
-```
-Note that the `/latest` path will allow you to install the latest extension version available for your current version of
-DuckDB. To specify a specific version, you can pass the version instead.
+-- Run a query every minute
+SELECT cron('SELECT COUNT(*) FROM mytable', '* * * * *') AS job_id;
 
-After running these steps, you can install and load your extension using the regular INSTALL/LOAD commands in DuckDB:
+-- Run a query every hour at minute 0
+SELECT cron('SELECT now()', '0 * * * *') AS job_id;
+
+-- Run a query every day at 2:30 AM
+SELECT cron('CALL maintenance()', '30 2 * * *') AS job_id;
+```
+
+The function returns a job ID that can be used to manage the scheduled task.
+
+### Listing Jobs
+Use the cron_jobs() table function to view all scheduled jobs and their status:
 ```sql
-INSTALL cronjob
-LOAD cronjob
+SELECT * FROM cron_jobs();
+
+┌─────────┬──────────────────┬────────────────┬──────────────────────────┬─────────┬──────────────────────────┬─────────────┐
+│ job_id  │      query       │    schedule    │         next_run         │ status  │         last_run         │ last_result │
+│ varchar │     varchar      │    varchar     │         varchar          │ varchar │         varchar          │   varchar   │
+├─────────┼──────────────────┼────────────────┼──────────────────────────┼─────────┼──────────────────────────┼─────────────┤
+│ task_0  │ SELECT version() │ */10 * * * * * │ Fri Nov 15 20:44:20 2024 │ Active  │ Fri Nov 15 20:44:10 2024 │ Success     │
+└─────────┴──────────────────┴────────────────┴──────────────────────────┴─────────┴──────────────────────────┴─────────────┘
+```
+
+Returns:
+
+- `job_id``: Unique identifier for the job
+- `query`: The SQL query to execute
+- `schedule`: The cron expression
+- `next_run`: Next scheduled execution time
+- `status`: Current status (Active/Inactive)
+- `last_run`: Last execution timestamp
+-  last_result`: Result of the last execution
+
+### Deleting Jobs
+To delete a scheduled job:
+```sql
+SELECT cron_delete('task_0');
 ```
