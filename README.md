@@ -5,6 +5,12 @@ The DuckDB Cron extension adds support for scheduled query execution within Duck
 
 > Experimental: USE AT YOUR OWN RISK!
 
+### Install & Load
+```sql
+INSTALL cronjob FROM community;
+LOAD cronjob;
+```
+
 ### Cron Runner
 ```sql
 -- Every 15 seconds during hours 1-4
