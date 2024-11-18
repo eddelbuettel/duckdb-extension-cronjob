@@ -87,7 +87,7 @@ Returns:
 - `next_run`: Next scheduled execution time
 - `status`: Current status (Active/Inactive)
 - `last_run`: Last execution timestamp
--  last_result`: Result of the last execution
+- `last_result`: Result of the last execution
 
 ### Deleting Jobs
 To delete a scheduled job:
